@@ -13,6 +13,7 @@ LABEL maintainer "Jan Garaj <jan.garaj@gmail.com>"
 
 ENV \
   APP_PORT=80 \
+  DEBUG=false \
   INFLUXDB_URL=http://localhost:8086 \
   INFLUXDB_USERNAME= \
   INFLUXDB_PASSWORD= \

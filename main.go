@@ -32,20 +32,23 @@ func Init(
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
-	Info.Printf("Processing request: %v %v %v %v %v",
-		r.RemoteAddr, r.Method, r.Proto, r.Host, r.URL)
-
+	if string(os.Getenv("DEBUG")) == "true" {
+		Info.Printf("DEBUG: Processing request: %v %v %v %v %v",
+			r.RemoteAddr, r.Method, r.Proto, r.Host, r.URL)
+	}
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(r.Body)
 	defer r.Body.Close()
 	newStr := buf.String()
 	jsonParsed, err := gabs.ParseJSON([]byte(newStr))
 	if err != nil {
-		Error.Printf("JSON decode error: " + err.Error())
-		http.Error(w, "JSON decode error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: JSON decode error: " + err.Error())
+		http.Error(w, "ERROR: JSON decode error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//Info.Printf("Parsed struct: %s\n", jsonParsed)
+	if string(os.Getenv("DEBUG")) == "true" {
+		Info.Printf("DEBUG: Parsed struct: %s\n", jsonParsed)
+	}
 
 	fmt.Fprintf(w, dataInflux(jsonParsed, w))
 }
@@ -54,17 +57,16 @@ func main() {
 	Init(os.Stdout, os.Stderr)
 	Info.Printf("Starting c2i")
 	// TODO hide password values
-        /*
-	for _, pair := range os.Environ() {
-		Info.Printf("Env variable: %s\n", pair)
-	}
-        */
+	/*
+		for _, pair := range os.Environ() {
+			Info.Printf("Env variable: %s\n", pair)
+		}
+	*/
 	http.HandleFunc("/data/", dataHandler)
 	http.ListenAndServe(":"+os.Getenv("APP_PORT"), nil)
 }
 
 func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
-	var datestamp = time.Now()
 
 	// Create a new HTTPClient
 	c, err := client.NewHTTPClient(client.HTTPConfig{
@@ -93,8 +95,20 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	var value float64
 	var text string
 	var ok bool
+	var datestamp time.Time
 	tags := map[string]string{}
 	fields := map[string]interface{}{}
+
+	// timestamp
+	text, ok = jsonParsed.Path("Summary.Timestamp").Data().(string)
+	if ok {
+		datestamp, err = time.Parse("20060102150405", text[0:14])
+		if err != nil {
+			Error.Printf("InfluxDB error: " + err.Error())
+			http.Error(w, "InfluxDB error: "+err.Error(), http.StatusInternalServerError)
+			return "ERROR"
+		}
+	}
 
 	// POINT test_timing
 	text, ok = jsonParsed.Path("TestDetail.Name").Data().(string)
@@ -157,11 +171,14 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	}
 	pt, err := client.NewPoint("test_timing", tags, fields, datestamp)
 	if err != nil {
-		Error.Printf("InfluxDB point error: " + err.Error())
-		http.Error(w, "InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB point error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 	bp.AddPoint(pt)
+	if string(os.Getenv("DEBUG")) == "true" {
+		Info.Printf("DEBUG: InfluxDB test_timing batch point: %s\n", pt)
+	}
 
 	// POINT test_byte
 	fields = map[string]interface{}{}
@@ -197,11 +214,14 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	}
 	pt, err = client.NewPoint("test_byte", tags, fields, datestamp)
 	if err != nil {
-		Error.Printf("InfluxDB point error: " + err.Error())
-		http.Error(w, "InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB point error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 	bp.AddPoint(pt)
+	if string(os.Getenv("DEBUG")) == "true" {
+		Info.Printf("DEBUG: InfluxDB test_byte batch point: %s\n", pt)
+	}
 
 	// POINT test_counter
 	fields = map[string]interface{}{}
@@ -230,16 +250,19 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	}
 	pt, err = client.NewPoint("test_counter", tags, fields, datestamp)
 	if err != nil {
-		Error.Printf("InfluxDB point error: " + err.Error())
-		http.Error(w, "InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB point error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 	bp.AddPoint(pt)
+	if string(os.Getenv("DEBUG")) == "true" {
+		Info.Printf("DEBUG: InfluxDB test_counter batch point: %s\n", pt)
+	}
 
 	// Write the batch
 	if err := c.Write(bp); err != nil {
-		Error.Printf("InfluxDB error: " + err.Error())
-		http.Error(w, "InfluxDB error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 
