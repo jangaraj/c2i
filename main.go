@@ -68,6 +68,10 @@ func main() {
 
 func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 
+	if string(os.Getenv("DEBUG")) == "true" {
+		log.Printf("Processing Lambda request\n")
+	}
+
 	// Create a new HTTPClient
 	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr:     os.Getenv("INFLUXDB_URL"),
@@ -75,8 +79,8 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 		Password: os.Getenv("INFLUXDB_PASSWORD"),
 	})
 	if err != nil {
-		Error.Printf("InfluxDB error: " + err.Error())
-		http.Error(w, "InfluxDB error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 
@@ -86,10 +90,9 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 		Precision: "s",
 	})
 	if err != nil {
-		Error.Printf("InfluxDB error: " + err.Error())
-		http.Error(w, "InfluxDB error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
-
 	}
 
 	var value float64
@@ -104,8 +107,8 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	if ok {
 		datestamp, err = time.Parse("20060102150405", text[0:14])
 		if err != nil {
-			Error.Printf("InfluxDB error: " + err.Error())
-			http.Error(w, "InfluxDB error: "+err.Error(), http.StatusInternalServerError)
+			Error.Printf("ERROR: InfluxDB error: " + err.Error())
+			http.Error(w, "ERROR: InfluxDB error: "+err.Error(), http.StatusInternalServerError)
 			return "ERROR"
 		}
 	}
@@ -171,13 +174,13 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	}
 	pt, err := client.NewPoint("test_timing", tags, fields, datestamp)
 	if err != nil {
-		Error.Printf("ERROR: InfluxDB point error: " + err.Error())
-		http.Error(w, "ERROR: InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 	bp.AddPoint(pt)
 	if string(os.Getenv("DEBUG")) == "true" {
-		Info.Printf("DEBUG: InfluxDB test_timing batch point: %s\n", pt)
+		log.Printf("DEBUG: InfluxDB test_timing batch point: %s\n", pt)
 	}
 
 	// POINT test_byte
@@ -214,13 +217,13 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	}
 	pt, err = client.NewPoint("test_byte", tags, fields, datestamp)
 	if err != nil {
-		Error.Printf("ERROR: InfluxDB point error: " + err.Error())
-		http.Error(w, "ERROR: InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 	bp.AddPoint(pt)
 	if string(os.Getenv("DEBUG")) == "true" {
-		Info.Printf("DEBUG: InfluxDB test_byte batch point: %s\n", pt)
+		log.Printf("DEBUG: InfluxDB test_byte batch point: %s\n", pt)
 	}
 
 	// POINT test_counter
@@ -248,15 +251,18 @@ func dataInflux(jsonParsed *gabs.Container, w http.ResponseWriter) string {
 	} else {
 		fields["availability"] = float64(100)
 	}
+	fields["month"] = datestamp.Format("01")
+	fields["year"] = datestamp.Format("2006")
+	fields["year-month"] = datestamp.Format("2006-01")
 	pt, err = client.NewPoint("test_counter", tags, fields, datestamp)
 	if err != nil {
-		Error.Printf("ERROR: InfluxDB point error: " + err.Error())
-		http.Error(w, "ERROR: InfluxDB point error: "+err.Error(), http.StatusInternalServerError)
+		Error.Printf("ERROR: InfluxDB error: " + err.Error())
+		http.Error(w, "ERROR: InfluxDB error: "+err.Error(), http.StatusInternalServerError)
 		return "ERROR"
 	}
 	bp.AddPoint(pt)
 	if string(os.Getenv("DEBUG")) == "true" {
-		Info.Printf("DEBUG: InfluxDB test_counter batch point: %s\n", pt)
+		log.Printf("DEBUG: InfluxDB test_counter batch point: %s\n", pt)
 	}
 
 	// Write the batch

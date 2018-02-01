@@ -143,25 +143,25 @@ func Handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	} else {
 		fields["totalcontent"] = float64(0)
 	}
-	value, ok = jsonParsed.Path("Summary.Byte.Response.Image").Data().(float64)
+	value, ok = jsonParsed.Path("Summary.Byte.Response.ContentType.Image").Data().(float64)
 	if ok {
 		fields["image"] = value
 	} else {
 		fields["image"] = float64(0)
 	}
-	value, ok = jsonParsed.Path("Summary.Byte.Response.Script").Data().(float64)
+	value, ok = jsonParsed.Path("Summary.Byte.Response.ContentType.Script").Data().(float64)
 	if ok {
 		fields["script"] = value
 	} else {
 		fields["script"] = float64(0)
 	}
-	value, ok = jsonParsed.Path("Summary.Byte.Response.Css").Data().(float64)
+	value, ok = jsonParsed.Path("Summary.Byte.Response.ContentType.Css").Data().(float64)
 	if ok {
 		fields["css"] = value
 	} else {
 		fields["css"] = float64(0)
 	}
-	value, ok = jsonParsed.Path("Summary.Byte.Response.Html").Data().(float64)
+	value, ok = jsonParsed.Path("Summary.Byte.Response.ContentType.Html").Data().(float64)
 	if ok {
 		fields["html"] = value
 	} else {
